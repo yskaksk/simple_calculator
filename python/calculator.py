@@ -1,4 +1,5 @@
 import sys
+import math
 from enum import Enum, auto
 
 class Token:
@@ -60,7 +61,7 @@ class TokenStream:
             if c == " ":
                 ind += 1
                 continue
-            elif c in "+-/*()":
+            elif c in "+-/*()^":
                 token = Token(TokenKind.Reserved, c)
                 cur.right = token
                 cur = token
@@ -109,6 +110,7 @@ class NodeKind(Enum):
     MUL = auto()
     DIV = auto()
     NUM = auto()
+    POW = auto()
 
 def calculate(node):
     if node.kind == NodeKind.NUM:
@@ -123,8 +125,10 @@ def calculate(node):
         return l - r
     elif node.kind == NodeKind.MUL:
         return l * r
-    else: # node.kind == NodeKind.DIV:
+    elif node.kind == NodeKind.DIV:
         return l / r
+    else: # node.kind == NodeKind.POW
+        return math.pow(l, r)
 
 # expression : add
 def expression(token_stream):
@@ -160,7 +164,14 @@ def unary(token_stream):
         return unary(token_stream)
     if token_stream.consume("-"):
         return Node(NodeKind.SUB, Node(NodeKind.NUM, None, None, 0), unary(token_stream))
-    return primary(token_stream)
+    return power(token_stream)
+
+# power : primary ("^" primary)?
+def power(token_stream):
+    node = primary(token_stream)
+    if token_stream.consume("^"):
+        return Node(NodeKind.POW, node, primary(token_stream))
+    return node
 
 # primary : number | "(" expr ")"
 def primary(token_stream):

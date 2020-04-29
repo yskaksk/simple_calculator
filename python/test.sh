@@ -27,5 +27,6 @@ assert 1 "-1 * -1"
 assert 1 "--1"
 assert 1 "-+-1"
 assert 3 "2 + -+-1"
+assert 1024.0 "(3 - 1)^(1 + 3 * 3)"
 
 echo OK
