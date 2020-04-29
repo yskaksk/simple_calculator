@@ -60,7 +60,7 @@ class TokenStream:
             if c == " ":
                 ind += 1
                 continue
-            elif c in "+-*/":
+            elif c in "+-/*()":
                 token = Token(TokenKind.Reserved, c)
                 cur.right = token
                 cur = token
@@ -154,8 +154,12 @@ def mul(token_stream):
         else:
             return node
 
-# primary : number
+# primary : number | "(" expr ")"
 def primary(token_stream):
+    if token_stream.consume("("):
+        node = expression(token_stream)
+        token_stream.expect(")")
+        return node
     number = token_stream.expect_number()
     return Node(NodeKind.NUM, None, None, number)
 
