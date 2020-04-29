@@ -142,17 +142,25 @@ def add(token_stream):
         else:
             return node
 
-# mul     : primary ("*" primary | "/" primary)*
+# mul     : unary ("*" unary | "/" unary)*
 def mul(token_stream):
-    node = primary(token_stream)
+    node = unary(token_stream)
 
     while True:
         if token_stream.consume("*"):
-            node = Node(NodeKind.MUL, node, primary(token_stream))
+            node = Node(NodeKind.MUL, node, unary(token_stream))
         elif token_stream.consume("/"):
-            node = Node(NodeKind.DIV, node, primary(token_stream))
+            node = Node(NodeKind.DIV, node, unary(token_stream))
         else:
             return node
+
+# unary : ("+" | "-")? unary | primary
+def unary(token_stream):
+    if token_stream.consume("+"):
+        return unary(token_stream)
+    if token_stream.consume("-"):
+        return Node(NodeKind.SUB, Node(NodeKind.NUM, None, None, 0), unary(token_stream))
+    return primary(token_stream)
 
 # primary : number | "(" expr ")"
 def primary(token_stream):
