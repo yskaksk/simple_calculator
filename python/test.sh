@@ -3,7 +3,6 @@ assert() {
     expected="$1"
     input="$2"
 
-    python3 ./calculator.py "$input"
     actual=$(python3 ./calculator.py "$input")
 
     if [ "$actual" = "$expected" ]; then

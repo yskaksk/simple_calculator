@@ -50,7 +50,7 @@ class TokenStream:
             if ind == len(code):
                 break
             c = code[ind]
-        return val, ind - 1
+        return val, ind
 
     def parse(self, code):
         head = Token(TokenKind.HEAD)
@@ -71,7 +71,6 @@ class TokenStream:
                 token = Token(TokenKind.Number, "", val)
                 cur.right = token
                 cur = token
-                ind += 1
         cur.right = Token(TokenKind.EOF)
         return head
 
