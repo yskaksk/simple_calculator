@@ -1,24 +1,4 @@
-abstract type AbstractTokenKind end
-struct TkNumber <: AbstractTokenKind end
-struct TkReserved <: AbstractTokenKind end
-struct TkHEAD <: AbstractTokenKind end
-struct TkEOF <: AbstractTokenKind end
-
-mutable struct Token
-    kind::AbstractTokenKind
-    char::Union{Char, Nothing}
-    val::Int
-    next::Union{Token, Nothing}
-    function Token(kind::AbstractTokenKind)
-        new(kind, nothing, 0, nothing)
-    end
-    function Token(val::Int)
-        new(TkNumber(), nothing, val, nothing)
-    end
-    function Token(c::Char)
-        new(TkReserved(), c, 0, nothing)
-    end
-end
+include("types.jl")
 
 function token_head()::Token
     return Token(TkHEAD())
@@ -52,7 +32,7 @@ function parse_code(code::Vector{Char})::Token
         if c == ' '
             ind += 1
             continue
-        elseif c in ['+', '-']
+        elseif c in ['+', '-', '*', '/', '(', ')']
             cur.next = Token(c)
             cur = cur.next
             ind += 1
@@ -91,27 +71,90 @@ function expect_number(cur::Token)
     return next.val
 end
 
-function main()
-    code = ARGS[1] |> Vector{Char}
-    head = parse_code(code)
-    result = expect_number(head)
-    cur = head.next
-    while !(cur.next.kind isa TkEOF)
-        plus = consume('+', cur)
-        if plus
-            cur = cur.next
-            val = expect_number(cur)
-            result += val
-            cur = cur.next
-            continue
-        end
-        expect('-', cur)
-        cur = cur.next
-        val = expect_number(cur)
-        result -= val
-        cur = cur.next
+function calculate(node::Node)
+    if node.kind isa NdNUM
+        return node.val
     end
-    print(result)
+    l = calculate(node.lhs)
+    r = calculate(node.rhs)
+    if node.kind isa NdADD
+        return l + r
+    elseif node.kind isa NdSUB
+        return l - r
+    elseif node.kind isa NdMUL
+        return l * r
+    else # if node.kind isa NdDIV
+        return l / r
+    end
+end
+
+function expression!(ts::TokenStream)::Node
+    return add!(ts)
+end
+
+function add!(ts::TokenStream)::Node
+    node = mul!(ts)
+    while true
+        if consume('+', ts.current)
+            ts.current = ts.current.next
+            node = Node(NdADD(), node, mul!(ts))
+        elseif consume('-', ts.current)
+            ts.current = ts.current.next
+            node = Node(NdSUB(), node, mul!(ts))
+        else
+            break
+        end
+    end
+    return node
+end
+
+function mul!(ts::TokenStream)::Node
+    node = unary!(ts)
+    while true
+        if consume('*', ts.current)
+            ts.current = ts.current.next
+            node = Node(NdMUL(), node, unary!(ts))
+        elseif consume('/', ts.current)
+            ts.current = ts.current.next
+            node = Node(NdDIV(), node, unary!(ts))
+        else
+            break
+        end
+    end
+    return node
+end
+
+function unary!(ts::TokenStream)::Node
+    if consume('+', ts.current)
+        ts.current = ts.current.next
+        return unary!(ts)
+    elseif consume('-', ts.current)
+        ts.current = ts.current.next
+        return Node(NdSUB(), Node(0), unary!(ts))
+    else
+        return primary!(ts)
+    end
+end
+
+function primary!(ts::TokenStream)::Node
+    if consume('(', ts.current)
+        ts.current = ts.current.next
+        node = expression!(ts)
+        try
+            expect(')', ts.current)
+        catch
+            error("カッコの数が一致しません")
+        end
+        ts.current = ts.current.next
+        return node
+    end
+    val = expect_number(ts.current)
+    ts.current = ts.current.next
+    return Node(val)
+end
+
+function main()
+    ARGS[1] |> Vector{Char} |> parse_code |> TokenStream |> expression! |> calculate |> print
 end
 
 main()
